@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.email             = 'mikewadhera@gmail.com'
   s.authors           = ["Mike Wadhera"]
 
-  s.files             = %w( README.rdoc mega_fetch.rb )
+  s.files             = %w( README.rdoc lib/mega_fetch.rb )
 
   s.extra_rdoc_files  = [ "README.rdoc" ]
   s.rdoc_options      = ["--charset=UTF-8"]
