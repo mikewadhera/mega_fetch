@@ -94,7 +94,7 @@ module MegaFetch
 
     def calculate_client_timeout
       case @edge
-      when "/posts" then 35
+      when "/posts" then 60
       else
         Client::Config[:default_timeout]
       end
