@@ -1,0 +1,73 @@
+= MegaFetch - a robust Facebook OpenGraph API batch client for Ruby 1.9
+
+The goal of this library is to be able to write code like this:
+
+  MegaFetch::Stream.new(["involver", "facebook", ...]).each do |node|
+    SocialNode.find_by_origin_identifier(node[:id]).update_attribute(:like_count, node[:likes])
+  end
+
+...and have the underlying API batching logic & execution layer completely hidden from the developer.
+
+== FEATURES
+
+=== Provides infinite processing with minimal API calls
+
+Thanks to Fibers in 1.9, MegaFetch can process arbitrarily-large, potentially-infinite sources.
+
+You can pass any Enumerable to MegaFetch, including your own streaming facade.
+
+This allows you to easily attach MegaFetch to a continous processing pipeline:
+
+  class DatabasePoller
+    include Enumerable
+   
+    def each(&block)
+      node_id = # fetch node from DB
+      yield(node_id)
+      sleep 10
+    end
+  end
+
+  MegaFetch::Stream.new(DatabasePoller.new).each { |n| puts n.inspect }
+
+Since batching happens transparently, you're guaranteed that the absolute minimum number of API calls are being made.
+
+==== Obligatory unscientific benchmark
+
+On a mid-gen 2011 Macbook Pro with Ruby 1.9.2 over wifi, MegaFetch processed a logfile of 200,000 OpenGraph IDs in less than 10 minutes.
+
+During this time CPU never climbed above 15% and residential memory grew at a small linear rate, eventually flatlining around 30MB.
+
+=== Enumerable
+  
+MegaFetch::Stream itself is Enumerable, so you can write nifty one-liners like these:
+
+  MegaFetch::Stream.new(["justinbieber", "barackobama", "coolio"]).all?   { |n| n[:likes] > 1_000_000 }
+    # => false
+  MegaFetch::Stream.new(["justinbieber", "barackobama", "coolio"]).select { |n| n[:likes] > 1_000_000 }
+    # => [<justinbieber>, <barackobama>]
+
+=== Fault Tolerant
+
+No client intented for production-use should go without the ability to deal with failure and MegaFetch is no different.
+
+- Failed batches are automatically retried with out-of-the-box backpressure support.
+- Retry logic is user configurable, see MegaFetch::Client::Config
+- By default, up to 3 retries are attempted with 0, 2 & 4 second delays respectively
+
+=== Stats Rich
+
+MegaFetch can also provide runtime statistics, such as how much of the source has been consumed, 
+how many requests have been made, how many batches have failed etc.
+
+You can call Stream#inspect at any point to see this summarized nicely:
+
+  MegaFetch::Stream.new(File.open("/data/pages/index")).inspect
+   # => #<MegaFetch::Stream: #<File:/data/pages/index/sample>, offset: 0, 
+           client: #<MegaFetch::Client: #<Net::HTTP graph.facebook.com:443 open=false>, 
+            timeout_seconds: 10, requests_attempted: 0, requests_completed: 0, requests_timedout: 0, server_errors: 0>, failed: 0>
+
+=== Lightweight
+
+- Thanks to Ruby's expressiveness the entire library clocks in at around 200LOC
+- Except for YAJL, there are also no external dependencies outside of the 1.9 standard lib
