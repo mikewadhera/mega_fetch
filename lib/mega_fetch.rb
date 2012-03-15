@@ -133,8 +133,6 @@ module MegaFetch
           nodes.each do |id, node|
             @nodes << [id, node]
           end
-        else
-          raise BadRequest, nodes.inspect
         end
       end
     rescue Yajl::ParseError => e
